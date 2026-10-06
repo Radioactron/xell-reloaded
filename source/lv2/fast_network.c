@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "spooky.h"
 
 #include <ppc/timebase.h>
 
@@ -95,6 +96,7 @@ void network_init()
 
 void network_poll()
 {
+    spooky_poll();
     now = mftb();
     enet_poll(&netif);
 
