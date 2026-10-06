@@ -22,6 +22,7 @@ used for zlib support ...
 
 #include "config.h"
 #include "file.h"
+#include "spooky.h"
 #include "kboot/kbootconf.h"
 #include "tftp/tftp.h"
 #include "../lv1/puff/puff.h"
@@ -106,6 +107,7 @@ void wait_and_cleanup_line()
 	uint64_t t=mftb();
 	while(tb_diff_msec(mftb(),t)<200){ // yield to network
 		network_poll();
+        spooky_poll();
 	}
 	console_clrline();
 }
@@ -139,8 +141,10 @@ int launch_file(void * addr, unsigned len, int filetype){
 			}
             if (memcmp(addr, elfhdr, 4))
 				return -1;
+            spooky_restore();
             printf(" * Launching ELF...\n");
             ret = elf_runWithDeviceTree(addr,len,dt_blob_start,dt_blob_end-dt_blob_start);
+            spooky_init();
             break;
 		case TYPE_INITRD:
 			printf(" * Loading initrd into memory ...\n");
@@ -167,13 +171,15 @@ int try_load_file(char *filename, int filetype)
 {
 	int ret;
 	if(filetype == TYPE_NANDIMAGE){
-		try_rawflash(filename);
+		spooky_restore();
+        try_rawflash(filename);
 		return -1;
 	}
 
 	if (filetype == TYPE_UPDXELL)
 	{
-		updateXeLL(filename);
+		spooky_restore();
+        updateXeLL(filename);
 		return -1;
 	}
 	
@@ -227,6 +233,7 @@ void fileloop() {
                 if (devoptab_list[i]->structSize) {
                         do{
 							usb_do_poll();
+                            spooky_poll();
 							if (!devoptab_list[i]->structSize)
 								break;
 							sprintf(filepath, "%s:/%s", devoptab_list[i]->name,filelist[j].filename);
@@ -264,6 +271,7 @@ void tftp_loop() {
 			i++;
 		}
 		network_poll();
+        spooky_poll();
 	} while(strcmp(filelist[i].filename, " "));
     wait_and_cleanup_line();
     printf("Trying TFTP %s:%s...\r",boot_server_name(),boot_file_name());
