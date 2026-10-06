@@ -33,7 +33,7 @@
 #include "file.h"
 #include "tftp/tftp.h"
 #include "log.h"
-#include "splash.h"
+#include "spooky.h"
 #include "functions_menu.h"
 
 
@@ -135,18 +135,10 @@ int main() {
     dumpana();
 
 
-#ifdef SWIZZY_THEME
-    console_set_colors(CONSOLE_COLOR_BLACK, CONSOLE_COLOR_RED);
-#elif defined XTUDO_THEME
-    console_set_colors(CONSOLE_COLOR_BLACK, CONSOLE_COLOR_PINK);
-#elif defined DEFAULT_THEME
-    console_set_colors(CONSOLE_COLOR_BLACK, CONSOLE_COLOR_GREEN);
-#else
-    console_set_colors(CONSOLE_COLOR_BLACK, CONSOLE_COLOR_GREEN);
-#endif
+    console_set_colors(CONSOLE_COLOR_BLACK, CONSOLE_COLOR_ORANGE);
 
     console_init();
-    galaxy_splash_show(5);
+    spooky_init();
 
 
     printf(
@@ -196,7 +188,9 @@ int main() {
     printf(" * usb init\n");
 
     usb_init();
+    spooky_input_ready();
     usb_do_poll();
+    spooky_poll();
 
 
     printf(" * sata hdd init\n");
@@ -303,11 +297,6 @@ int main() {
     } else if (xenon_get_console_type() == 2) {
 
         printf(" * Console: Falcon System\n");
-        printf(" * Mod: RGH-1.3 - CHKSTOP - 2 Wire\n");
-        printf(" * Glitcher: Matrix Glitcher V3 - Disabled Oscillator\n");
-        printf(" * Mod Date: 9/6/2026 - 5:34PM\n");
-        printf(" * Actual Motherboard Date: 09/05/2008 - MDY\n");
-        printf(" * Modders: squidwidthe1st on discord\n");
 
     } else if (xenon_get_console_type() == 3) {
 
@@ -355,12 +344,16 @@ int main() {
 
     printf("\n * Looking for files on local media and TFTP...\n\n");
 
+    printf(" * Y: toggle the fake red-ring prank (Y again restores the screen).\n");
+
     for (;;) {
+        spooky_poll();
         fileloop();
         tftp_loop();
         console_clrline();
         usb_do_poll();
         xell_functions_poll();
+        spooky_poll();
     }
 
     return 0;
