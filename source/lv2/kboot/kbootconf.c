@@ -28,6 +28,7 @@ see file COPYING or http://www.gnu.org/licenses/old-licenses/gpl-2.0.txt
 #include "tftp/tftp.h"
 #include "kbootconf.h"
 #include "file.h"
+#include "spooky.h"
 
 int boot_entry;
 char conf_buf[MAX_KBOOTCONF_SIZE];
@@ -418,7 +419,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
         redraw = 1;
       }
 
-       if (get_controller_data(&ctrl, 0)) {
+       if (spooky_get_controller_data(&ctrl, 0)) {
          if ((ctrl.a > old_ctrl.a) || (ctrl.start > old_ctrl.start))
              return defaultchoice;
          else if ((ctrl.b > old_ctrl.b) || (ctrl.back > old_ctrl.back))
@@ -433,6 +434,7 @@ int user_prompt(int defaultchoice, int max, int timeout) {
 
     network_poll();
     usb_do_poll();
+    spooky_poll();
 
     if(old_default != defaultchoice)
 	timeout_disabled = 1;
