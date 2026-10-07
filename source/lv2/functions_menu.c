@@ -9,6 +9,7 @@
 #include <xenon_smc/xenon_smc.h>
 
 #include "functions_menu.h"
+#include "spooky.h"
 
 #define MENU_ITEM_COUNT 2
 #define BACK_HOLD_MS 1000
@@ -22,10 +23,11 @@ static int read_controller(struct controller_data_s *ctrl)
 {
     int port;
 
+    spooky_poll();
     usb_do_poll();
 
     for (port = 0; port < 4; ++port) {
-        if (get_controller_data(ctrl, port))
+        if (spooky_get_controller_data(ctrl, port))
             return 1;
     }
 
@@ -62,6 +64,7 @@ static void shutdown_if_back_held(struct controller_data_s *ctrl, uint64_t *back
 
         if (tb_diff_msec(mftb(), *back_start) >= BACK_HOLD_MS) {
             printf("\nBack held - shutting down console...\n");
+            spooky_restore();
             xenon_smc_power_shutdown();
             for (;;)
                 mdelay(1000);
@@ -80,13 +83,14 @@ static void draw_menu(int selected)
     for (i = 0; i < MENU_ITEM_COUNT; ++i)
         printf(" %c %s\n", (i == selected) ? '>' : ' ', menu_items[i]);
 
-    printf("\nD-pad Up/Down to move, A to select, B to go back, hold Back to shut down.\n");
+    printf("\nD-pad Up/Down to move, A to select, B to go back, hold Back to shut down. Y toggles the prank.\n");
 }
 
 static void run_selected_function(int selected)
 {
     if (selected == 0) {
         printf("\nRebooting console...\n");
+        spooky_restore();
         xenon_smc_power_reboot();
         for (;;)
             mdelay(1000);
@@ -94,6 +98,7 @@ static void run_selected_function(int selected)
 
     if (selected == 1) {
         printf("\nShutting down console...\n");
+        spooky_restore();
         xenon_smc_power_shutdown();
         for (;;)
             mdelay(1000);
@@ -119,6 +124,13 @@ static void functions_menu(void)
 
         if (read_controller(&ctrl)) {
             shutdown_if_back_held(&ctrl, &back_start);
+
+            if (spooky_prank_active()) {
+                old_ctrl=ctrl;
+                network_poll();
+                mdelay(10);
+                continue;
+            }
 
             if (ctrl.b > old_ctrl.b) {
                 printf("\nReturning to file/TFTP loop...\n");
@@ -161,13 +173,20 @@ void xell_functions_poll(void)
         return;
 
     printf("\nController Detected! Click A to access functions or click B to continue this loop.\n");
-    printf("Hold Back to shut down the console.\n");
+    printf("Hold Back to shut down the console. Y toggles the fake red-ring prank.\n");
 
     old_ctrl = ctrl;
 
     for (;;) {
         if (read_controller(&ctrl)) {
             shutdown_if_back_held(&ctrl, &back_start);
+
+            if (spooky_prank_active()) {
+                old_ctrl=ctrl;
+                network_poll();
+                mdelay(10);
+                continue;
+            }
 
             if (ctrl.a > old_ctrl.a) {
                 functions_menu();
