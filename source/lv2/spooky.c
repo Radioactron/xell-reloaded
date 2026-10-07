@@ -37,7 +37,6 @@ static uint32_t *saved_screen;
 static size_t screen_bytes;
 static unsigned int screen_width, screen_height, screen_stride;
 static int skull_x, skull_y, skull_width, skull_height;
-static int saved_cursor_x, saved_cursor_y;
 static int initialized, usb_ready, prank, y_was_down[4];
 static struct controller_data_s controller_cache[4];
 static int controller_pending[4];
@@ -189,7 +188,10 @@ void spooky_restore(void)
     if (saved_screen && screen) {
         memcpy(screen, saved_screen, screen_bytes);
         memdcbst(screen, (int)screen_bytes);
-        console_set_cursor(saved_cursor_x, saved_cursor_y);
+        /* Hidden stdout does not advance the console row. Status-line clears
+         * may reset its column, so resume at the start of that same row using
+         * the console API supplied by older libxenon builds as well. */
+        console_putch('\r');
     }
     free(saved_screen);
     saved_screen = NULL;
@@ -209,8 +211,6 @@ static void toggle_prank(uint64_t now)
         return;
     }
     memcpy(saved_screen, screen, screen_bytes);
-    saved_cursor_x = console_get_cursor_x();
-    saved_cursor_y = console_get_cursor_y();
     prank_start = now;
     prank = 1;
     last_red_mask = -1;
